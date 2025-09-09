@@ -1,0 +1,63 @@
+site_name: HAL
+site_description: Hardware-Aware Layouts for QECC - API Reference
+site_url:
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - .
+          options:
+            docstring_style: numpy
+            docstring_section_style: list
+            show_root_toc_entry: false
+            show_source: false
+            inherited_members: true
+            filters: []
+            merge_init_into_class: true
+            separate_signature: true
+            signature_crossrefs: true
+            heading_level: 2
+
+nav:
+  - Overview: index.md
+  - API Reference:
+    - hal: api/hal.md
+    - settings: api/settings.md
+    - tier: api/tier.md
+    - codes:
+      - directional_codes: api/codes/directional_codes.md
+      - generalized_toric_codes: api/codes/generalized_toric_codes.md
+      - radial_codes: api/codes/radial_codes.md
+      - tile_codes: api/codes/tile_codes.md
+    - placing:
+      - util: api/placing/util.md
+    - routing:
+      - astar: api/routing/astar.md
+      - routing_algo: api/routing/routing_algo.md
+      - straightline: api/routing/straightline.md
+    - utils:
+      - disk_utils: api/utils/disk_utils.md
+      - graph_utils: api/utils/graph_utils.md
+      - grid_utils: api/utils/grid_utils.md
+      - visualization_utils: api/utils/visualization_utils.md
+    - website:
+      - app: api/website/app.md
+      - build_website_data: api/website/build_website_data.md
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - footnotes
+  - tables
+  - toc:
+      permalink: true

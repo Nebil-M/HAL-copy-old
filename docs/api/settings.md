@@ -1,0 +1,3 @@
+# hal.settings
+
+::: hal.settings

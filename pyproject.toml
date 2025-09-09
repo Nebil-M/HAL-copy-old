@@ -1,0 +1,253 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hal"
+version = "0.1.0"
+description = "Hardware-Aware Layout (HAL) for quantum error correction codes"
+authors = [
+    {name = "Melvin Mathews, Lukas Pahl, David Pahl, Vaishnavi L. Addala, Catherine Tang", email = "melvinmathews@google.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+dependencies = [
+    "numpy>=1.26.4",
+    "networkx>=3.2.1",
+    "matplotlib>=3.8.3",
+    "pandas>=2.2.3",
+    "sympy",
+    "tqdm",
+    "netgraph>=4.13",
+    "python-louvain>=0.16",
+    "ldpc==2.2.8",
+    "bposd==2.1",
+    "qldpc==0.0.28",
+    "dash==3.1.1",
+    "plotly>=6.2.0",
+    "pyqt5>=5.15.10",
+    "qec==0.2.6",
+    "seaborn==0.13.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.1.1",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "pytest-xdist>=3.5.0",
+    "pylint>=3.0.0",
+    "mypy>=1.8.0",
+    "black>=24.0.0",
+    "isort>=5.13.0",
+    "flake8>=7.0.0",
+    "pre-commit>=3.6.0",
+    # docs
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocstrings>=0.24",
+    "mkdocstrings-python>=1.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-username/hal"
+Repository = "https://github.com/your-username/hal"
+Documentation = "https://github.com/your-username/hal#readme"
+Issues = "https://github.com/your-username/hal/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["hal*"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=hal",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--cov-fail-under=50",
+    "-v",
+    "--tb=short",
+]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "matplotlib.*",
+    "networkx.*",
+    "numpy.*",
+    "pandas.*",
+    "sympy.*",
+    "tqdm.*",
+    "netgraph.*",
+    "ldpc.*",
+    "bposd.*",
+    "qldpc.*",
+    "dash.*",
+    "plotly.*",
+]
+ignore_missing_imports = true
+
+[tool.black]
+line-length = 100
+target-version = ['py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 100
+known_first_party = ["hal"]
+known_third_party = [
+    "numpy", "networkx", "matplotlib", "pandas", "sympy",
+    "tqdm", "netgraph", "ldpc", "bposd", "qldpc", "dash", "plotly"
+]
+
+[tool.pylint.messages_control]
+disable = [
+    "C0114",  # missing-module-docstring
+    "C0115",  # missing-class-docstring
+    "C0116",  # missing-function-docstring
+    "import-error",  # third-party libs not installed in hook env
+    "no-name-in-module",  # tolerate compiled/namespace packages in hook env
+    "R0903",  # too-few-public-methods
+    "R0913",  # too-many-arguments
+    "R0914",  # too-many-locals
+    "R0915",  # too-many-statements
+    "C0103",  # invalid-name
+    "W0621",  # redefined-outer-name
+    "W0622",  # redefined-builtin
+    "W0703",  # broad-except
+    "W0511",  # fixme
+    "C0301",  # line-too-long
+    "W0611",  # unused-import
+    "W0612",  # unused-variable
+    "W0613",  # unused-argument
+    "C0302",  # too-many-lines
+    "W1514",  # unspecified-encoding
+]
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.pylint.basic]
+good-names = ["i", "j", "k", "ex", "Run", "_", "id", "db", "np", "nx", "plt", "pd"]
+ignored-modules = [
+  "qldpc",
+  "ldpc",
+  "bposd",
+  "netgraph",
+  "dash",
+  "plotly",
+  "qec",
+  "matplotlib",
+  "numpy",
+  "pandas",
+  "sympy",
+  "tqdm",
+  "networkx",
+  "community",
+]
+
+[tool.pylint.design]
+max-args = 10
+max-locals = 20
+max-returns = 10
+max-statements = 50
+max-branches = 40
+max-parents = 7
+max-attributes = 20
+min-public-methods = 1
+max-public-methods = 30
+max-nested-blocks = 6
+
+[tool.pylint.similarities]
+min-similarity-lines = 4
+ignore-comments = true
+ignore-docstrings = true
+ignore-imports = true
+
+[tool.pylint.master]
+ignore = ["hal/bias_tailored_qldpc", "tests"]
+ignore-paths = [
+  "^hal/bias_tailored_qldpc/",
+  "^tests/",
+]
+
+[tool.coverage.run]
+source = ["hal"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/env/*",
+    "*/hal_env/*",
+    "hal/website/app.py",
+    "hal/bias_tailored_qldpc/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
