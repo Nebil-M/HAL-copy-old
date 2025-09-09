@@ -83,6 +83,42 @@ results = hal.benchmark()
 print(results)
 ```
 
+### Output Structure
+
+When you run HAL with `place()`, `route()`, and `benchmark()` methods, it generates a timestamped folder containing comprehensive results and visualizations. Here's what gets created:
+
+```
+yyymmdd_aahbbmccs_radial_code_example/
+├── benchmark.csv           # Performance metrics and hardware complexity scores
+├── perf.json              # Timing information for placement and routing
+├── settings.json          # Complete configuration used for the run
+├── tanner                 # Binary Tanner graph representation
+├── grid_view/             # Grid visualization outputs
+│   ├── tier_grid_0.png    # Visual representation of tier 0 grid
+│   ├── tier_grid_1.png    # Visual representation of tier 1 grid
+│   └── tier_grids.pdf     # Combined PDF of all tier visualizations
+├── tier_interactive_0.png # Interactive visualization for tier 0
+├── tier_interactive_0.svg # Interactive SVG for tier 0
+├── tier_interactive_1.png # Interactive visualization for tier 1
+├── tier_interactive_1.svg # Interactive SVG for tier 1
+├── tiers/                 # Detailed tier-specific data
+│   ├── expanded_grid_0    # Expanded grid representation for tier 0
+│   ├── expanded_grid_1    # Expanded grid representation for tier 1
+│   ├── graph_0            # Graph structure for tier 0
+│   ├── graph_1            # Graph structure for tier 1
+│   ├── grid_0             # Grid layout for tier 0
+│   ├── grid_1             # Grid layout for tier 1
+│   ├── metrics_0.csv      # Detailed routing metrics for tier 0
+│   └── metrics_1.csv      # Detailed routing metrics for tier 1
+└── layers/                # Layer-specific routing data (if applicable)
+```
+
+- **`benchmark.csv`**: Contains normalized performance metrics including number of tiers, average coupler length, face switches, TSVs per edge, and overall hardware complexity score
+- **`perf.json`**: Timing breakdown showing placement time, benchmark time, and total execution time
+- **`settings.json`**: Complete snapshot of all configuration parameters used during execution
+- **`tier_interactive_*.png/svg`**: High-quality visualizations showing the final routed layout with interactive elements
+- **`tiers/metrics_*.csv`**: Detailed per-tier routing statistics including edge routing information, face switches, and routing paths
+
 ### Custom Configuration
 
 ```python

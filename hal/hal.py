@@ -10,13 +10,9 @@ from itertools import product
 from pathlib import Path
 from typing import Mapping, Optional
 
-import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import pandas as pd
-from matplotlib import colors
-from matplotlib.animation import FuncAnimation, PillowWriter
-from netgraph import InteractiveGraph
 from tqdm import tqdm
 
 import hal.placing.util as placing
