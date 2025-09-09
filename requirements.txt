@@ -1,0 +1,6 @@
+# This file is for GitHub Actions CI compatibility
+# The main dependencies are defined in pyproject.toml
+# This file is generated from pyproject.toml for CI purposes
+
+# Install the package in editable mode with dev dependencies
+-e .[dev]
