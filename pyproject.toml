@@ -36,6 +36,7 @@ dependencies = [
     "pyqt5>=5.15.10",
     "qec==0.2.6",
     "seaborn==0.13.2",
+    "gunicorn>=21.2.0",
 ]
 
 [project.optional-dependencies]
