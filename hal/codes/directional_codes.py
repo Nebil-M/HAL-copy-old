@@ -18,6 +18,7 @@ class DirectionalCode:
     Args:
         v1 (tuple[int, int]): The first vector defining the parallelogram for the torus.
         v2 (tuple[int, int]): The second vector defining the parallelogram for the torus.
+        grid_type (str): The type of grid to use, either "square" or "hex".
         layout (str, optional): The layout of X and Z stabilizers.
             Defaults to "Layout 1".
     """
