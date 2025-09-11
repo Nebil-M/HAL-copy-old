@@ -25,7 +25,7 @@ def create_path(directory_path: str, measurement_name: str, create_directory: bo
 
     path_to_experiment = Path(directory_path).joinpath(f"{str_ymd_measurement_name}")
 
-    Path.mkdir(path_to_experiment, exist_ok=True)
+    Path.mkdir(path_to_experiment, parents=True, exist_ok=True)
 
     Path.mkdir(path_to_experiment / "layers", exist_ok=True)
     Path.mkdir(path_to_experiment / "grid_view", exist_ok=True)
