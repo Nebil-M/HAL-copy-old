@@ -73,7 +73,7 @@ fig = px.scatter(
         "avg_coupler_length": "Length",
         "max_avg_face_switches": "Bump bonds",
         "avg_tsvs_per_edge": "TSVs",
-        "hardware_cost": "Hardware cost C_hw",
+        "hardware_cost": "Hardware complexity C_hw",
     },
 )
 
