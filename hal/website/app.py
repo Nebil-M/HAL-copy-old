@@ -45,6 +45,7 @@ code_type_colors = {
     "Radial code": "#FFBA0C",
     "Gross code": "#5992C5",
     "Tile code": "#EF6178",
+    "Tanner code": "#A5DC6A",
 }
 
 fig = px.scatter(
@@ -164,8 +165,8 @@ def update_image_gallery(clickData):
     except KeyError:
         return html.P("Error: 'customdata' key not found in clickData.")
 
-    # If surface or directional code, display appropriate lattice text instead of image gallery
-    if code_type in ["Surface code", "Directional code"]:
+    # If surface code, display appropriate lattice text instead of image gallery
+    if code_type in ["Surface code"]:
         lattice_type = "Square lattice" if weight == 4 else "Hex lattice"
         return html.Div(
             [

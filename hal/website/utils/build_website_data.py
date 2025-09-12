@@ -8,7 +8,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-labels = {
+code_types = {
     "surface_codes": "Surface code",
     "directional_codes": "Directional code",
     "gt_codes": "BB code",
@@ -16,16 +16,18 @@ labels = {
     "gross_codes": "Gross code",
     "tile_codes": "Tile code",
     "radial_codes": "Radial code",
+    "quantum_tanner_codes": "Tanner code",
 }
 
 
 def process_layout_folders(
-    source_dir: str, website_dir: str, code_type: str | None = None
+    source_dir: str, website_dir: str, group: str | None = None
 ) -> None:  # pylint: disable=too-many-branches,too-many-locals
     """
     Scans for new layout folders and updates the website's assets and data.csv
     without overwriting existing entries.
     """
+    code_type = code_types.get(group, "Unknown code type")
     assets_dir = os.path.join(website_dir, "assets")
     csv_path = os.path.join(website_dir, "data.csv")
 
@@ -53,9 +55,9 @@ def process_layout_folders(
 
     # Create a set of already processed directories for fast lookups
     processed_dirs = set(existing_df["layout_dir_path"])
-
+    
     folder_name_pattern = re.compile(
-        r"^\d{8}_\d{2}h\d{2}m\d{2}s_([a-zA-Z_]+)_\[\[(\d+),\s*(\d+),\s*(\d+)\]\]"
+        r".*?\[\[\s*(?P<n>\d+)\s*,\s*(?P<k>\d+)\s*,\s*(?P<d>\d+)\s*\]\]"
     )
 
     new_codes_data = []
@@ -86,24 +88,30 @@ def process_layout_folders(
         dest_asset_dir = os.path.join(assets_dir, folder_name)
         os.makedirs(dest_asset_dir, exist_ok=True)
 
-        # Find and copy all layer images
+        # Find and copy all layer images; backward compatibility for naming of tiers
         escaped_source_path = glob.escape(source_folder_path)
         image_files = sorted(glob.glob(os.path.join(escaped_source_path, "layer_*.png")))
+        image_files_tiers = sorted(glob.glob(os.path.join(escaped_source_path, "tier_*.png")))
 
         if not image_files:
-            print(f"--> No 'layer_*.png' images found in {folder_name}. Skipping.")
-            os.rmdir(dest_asset_dir)
-            continue
+            if not image_files_tiers:
+                print(f"--> No 'layer_*.png' or 'tier_*.png' images found in {folder_name}. Skipping.")
+                os.rmdir(dest_asset_dir)
+                continue
+            else:
+                image_files = image_files_tiers
+                tiers_string = "tiers"
+        else:
+            tiers_string = "layers"
 
         for img_path in image_files:
             shutil.copy(img_path, dest_asset_dir)
         print(f"  - Copied {len(image_files)} layer images to {dest_asset_dir}")
 
-        # Extract data for the CSV
-        code_type_raw, n_str, k_str, d_str = match.groups()
-        n, k, d = int(n_str), int(k_str), int(d_str)
-
-        code_type = code_type_raw.replace("_", " ").title() if not code_type else code_type
+        # Extract data for the CSV; Normalize captures from either ordering
+        m = folder_name_pattern.match(folder_name)        
+        if m:
+            n, k, d = map(int, (m["n"], m["k"], m["d"]))
 
         if n == 0:
             print(f"--> Skipping {folder_name} due to n=0.")
@@ -113,7 +121,7 @@ def process_layout_folders(
         benchmark_file = os.path.join(source_folder_path, "benchmark.csv")
         try:
             benchmark_df = pd.read_csv(benchmark_file)
-            num_layers = benchmark_df["num_layers"].iloc[-1]
+            num_layers = benchmark_df[f"num_{tiers_string}"].iloc[-1]
             avg_coupler_length = benchmark_df["avg_coupler_length"].iloc[-1]
             max_avg_face_switches = benchmark_df["max_avg_face_switches"].iloc[-1]
             avg_tsvs_per_edge = benchmark_df["avg_tsvs_per_edge"].iloc[-1]
@@ -154,8 +162,8 @@ def process_layout_folders(
             }
         )
 
-    # --- 2b. Handle surface and directional codes stored as JSONs only ---
-    for category in ["surface_codes", "directional_codes"]:
+    # --- 2b. Handle surface and codes stored as JSONs only ---
+    for category in ["surface_codes"]:
         category_path = source_dir
         if category not in category_path:
             continue
@@ -190,8 +198,6 @@ def process_layout_folders(
             if n == 0:
                 continue
             logical_efficiency = (k * d**2) / n
-
-            code_type = labels[category]  # e.g., "Surface code"
 
             hover_label = None
             weight = None
