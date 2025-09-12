@@ -61,17 +61,17 @@ mkdocs serve
 ### Basic Usage
 
 ```python
-from hal import HardwareAwareLayout, Settings
-from hal.codes import RadialCode
+from hal.hal import HardwareAwareLayout
+from hal.codes.radial_codes import RadialCode
 
 # Create a radial code
-code = RadialCode(r=2, s=2)
+radial_code = RadialCode(r=2, s=2)
 
 # Initialize HAL with default settings
 hal = HardwareAwareLayout(
-    name="radial_code_example",
-    directory_path="./output",
-    tanner_graph=code.graph
+    name="radial_code_example_[[16,2,4]]",
+    directory_path=PATH_TO_DATABASE,
+    tanner_graph=radial_code.graph
 )
 
 # Place and route
