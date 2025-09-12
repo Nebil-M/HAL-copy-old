@@ -55,7 +55,7 @@ def process_layout_folders(
 
     # Create a set of already processed directories for fast lookups
     processed_dirs = set(existing_df["layout_dir_path"])
-    
+
     folder_name_pattern = re.compile(
         r".*?\[\[\s*(?P<n>\d+)\s*,\s*(?P<k>\d+)\s*,\s*(?P<d>\d+)\s*\]\]"
     )
@@ -93,14 +93,16 @@ def process_layout_folders(
         image_files = sorted(glob.glob(os.path.join(escaped_source_path, "layer_*.png")))
         image_files_tiers = sorted(glob.glob(os.path.join(escaped_source_path, "tier_*.png")))
 
+        # If neither exists, skip and remove the dest dir
+        if not image_files and not image_files_tiers:
+            print(f"--> No 'layer_*.png' or 'tier_*.png' images found in {folder_name}. Skipping.")
+            os.rmdir(dest_asset_dir)
+            continue
+
+        # Prefer layer_*; otherwise fall back to tier_*
         if not image_files:
-            if not image_files_tiers:
-                print(f"--> No 'layer_*.png' or 'tier_*.png' images found in {folder_name}. Skipping.")
-                os.rmdir(dest_asset_dir)
-                continue
-            else:
-                image_files = image_files_tiers
-                tiers_string = "tiers"
+            image_files = image_files_tiers
+            tiers_string = "tiers"
         else:
             tiers_string = "layers"
 
@@ -109,7 +111,7 @@ def process_layout_folders(
         print(f"  - Copied {len(image_files)} layer images to {dest_asset_dir}")
 
         # Extract data for the CSV; Normalize captures from either ordering
-        m = folder_name_pattern.match(folder_name)        
+        m = folder_name_pattern.match(folder_name)
         if m:
             n, k, d = map(int, (m["n"], m["k"], m["d"]))
 
