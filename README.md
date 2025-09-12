@@ -305,10 +305,10 @@ If you use HAL in your research, please cite our paper:
 
 ```bibtex
 @article{hal2025,
-  title={Placing and Routing Non-Local Quantum Error Correcting Codes in Multi-Layer Superconducting Qubit Hardware},
-  author={Melvin Mathews, Lukas Pahl, David Pahl, Vaishnavi L. Addala, Catherine Tang},
-  journal={arXiv preprint},
+  title={Placing and Routing Quantum LDPC Codes in Multilayer Superconducting Hardware},
+  author={Melvin Mathews, Lukas Pahl, David Pahl, Vaishnavi L. Addala, Catherine Tang, William D. Oliver, Jeffrey A. Grover},
+  journal={arXiv preprint arXiv:2507.23011},
   year={2025},
-  url={https://github.com/EQuS/HAL}
+  url={https://arxiv.org/abs/2507.23011}
 }
 ```
