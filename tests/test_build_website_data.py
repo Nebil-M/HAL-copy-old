@@ -31,7 +31,7 @@ def test_process_layout_folders_adds_new_entries(tmp_path):
 
     # Act
     process_layout_folders(
-        source_dir=str(tmp_path), website_dir=str(website_dir), code_type="Radial code"
+        source_dir=str(tmp_path), website_dir=str(website_dir), group="radial_codes"
     )
 
     # Assert: assets copied and CSV updated

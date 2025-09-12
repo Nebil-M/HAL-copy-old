@@ -177,6 +177,7 @@ disable = [
     "W0613",  # unused-argument
     "C0302",  # too-many-lines
     "W1514",  # unspecified-encoding
+    "E0015",  #unrecognized-option
 ]
 
 [tool.pylint.format]
