@@ -95,7 +95,7 @@ fig.update_traces(marker={"size": 12, "line": {"width": 1, "color": "white"}})
 app.layout = html.Div(
     [
         html.H1(
-            "Hardware-Aware Layouts (HAL) of Quantum Error Correcting Codes",
+            "Hardware-Aware Layouts (HAL) of Quantum LDPC Codes",
             style={"textAlign": "center"},
         ),
         html.P(
