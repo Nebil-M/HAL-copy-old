@@ -11,7 +11,7 @@ import numpy as np
 
 
 def robust_unique_grid_positions(
-    pos: Dict[object, Tuple[float, float]]
+    pos: Dict[object, Tuple[float, float]],
 ) -> Dict[object, Tuple[int, int]]:
     """
     Two-phase approach: place non-conflicting nodes first,
