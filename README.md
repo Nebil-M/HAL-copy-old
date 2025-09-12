@@ -1,7 +1,7 @@
 # HAL: Hardware-Aware Layout for Quantum Error Correction
 
-[![CI](https://github.com/your-username/hal/workflows/CI/badge.svg)](https://github.com/your-username/hal/actions)
-[![Code Coverage](https://codecov.io/gh/your-username/hal/branch/main/graph/badge.svg)](https://codecov.io/gh/your-username/hal)
+[![CI](https://github.com/EQuS/HAL/workflows/CI/badge.svg)](https://github.com/your-username/hal/actions)
+[![Code Coverage](https://codecov.io/gh/EQuS/HAL/branch/main/graph/badge.svg)](https://codecov.io/gh/your-username/hal)
 [![Python Version](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -304,11 +304,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 If you use HAL in your research, please cite our paper:
 
 ```bibtex
-@article{hal2024,
-  title={HAL: Hardware-Aware Layout for Quantum Error Correction},
-  author={Your Name and Collaborators},
+@article{hal2025,
+  title={Placing and Routing Non-Local Quantum Error Correcting Codes in Multi-Layer Superconducting Qubit Hardware},
+  author={Melvin Mathews, Lukas Pahl, David Pahl, Vaishnavi L. Addala, Catherine Tang},
   journal={arXiv preprint},
   year={2025},
-  url={https://github.com/your-username/hal}
+  url={https://github.com/EQuS/HAL}
 }
 ```
