@@ -24,7 +24,7 @@ def test_get_optimal_check_qubit_coord_matches_reference() -> None:
     data_qubits = [(1, 1), (1, 3), (3, 1), (3, 3)]  # diamond around center
 
     # Function under test
-    best = Tile.get_optimal_check_qubit_coord(tile_grid_size, data_qubits)
+    best, _, _ = Tile.get_optimal_check_qubit_coord(tile_grid_size, data_qubits)
 
     # Basic properties
     assert 0 <= best[0] < tile_grid_size[0]

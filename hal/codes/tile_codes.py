@@ -1,3 +1,4 @@
+import random
 from copy import deepcopy
 from typing import Any, Dict, List, Literal, Optional, Tuple, TypedDict, cast
 
@@ -119,6 +120,14 @@ class Tile:
         Derived grid size for this tile (2× bounding_box).
     check_qubit : Qubit
         The check qubit instance created for this tile.
+    blocked_check_qubit_coords : list[tuple[int, int]]
+        List of blocked check qubit coordinates.
+    enforce_max_nearest_neighbors : bool
+        Whether to enforce a maximum number of nearest neighbors when choosing check qubit position.
+    distance_metric : Literal["euclidean", "manhattan", "random"] | None
+        The distance metric to use when choosing check qubit position.
+    tie_breaker : Literal["euclidean", "manhattan", "random"] | None
+        The tie breaker metric to use when choosing check qubit position.
     """
 
     def __init__(
@@ -126,9 +135,14 @@ class Tile:
         bounding_box: Tuple[int, int],
         data_qubit_coords: List[GridCoordType],
         basis: BasisType,
+        *,
         origin: GridCoordType = (0, 0),
         check_qubit_coord: Optional[GridCoordType] = None,
         parent_tile_matrix=None,
+        blocked_check_qubit_coords: Optional[list[GridCoordType]] = None,
+        enforce_max_nearest_neighbors: bool = False,
+        distance_metric: Optional[Literal["euclidean", "manhattan", "random"]] = "euclidean",
+        tie_breaker: Optional[Literal["euclidean", "manhattan", "random"]] = "random",
     ):
 
         # extract init parameters
@@ -138,6 +152,7 @@ class Tile:
         self.origin = origin
         self.check_qubit_coord = check_qubit_coord
         self.parent_tile_matrix = parent_tile_matrix
+        self.blocked_check_qubit_coords = blocked_check_qubit_coords or []
         self.tile_grid_size = (2 * bounding_box[0], 2 * bounding_box[1])
 
         # instantiate check qubit, shift it according to origin
@@ -150,8 +165,13 @@ class Tile:
                 np.sum(self.check_qubit_coord) % 2 == 0
             ), f"Check qubit coordinate {self.check_qubit_coord} must have even sum of coordinates."
         else:
-            self.check_qubit_coord = self.get_optimal_check_qubit_coord(
-                self.tile_grid_size, data_qubit_coords
+            self.check_qubit_coord, _, _ = self.get_optimal_check_qubit_coord(
+                self.tile_grid_size,
+                data_qubit_coords,
+                blocked_check_qubit_coords=blocked_check_qubit_coords,
+                enforce_max_nearest_neighbors=enforce_max_nearest_neighbors,
+                distance_metric=distance_metric,  # type: ignore
+                tie_breaker=tie_breaker,
             )
 
         self.absolute_check_qubit_coord = (
@@ -229,18 +249,29 @@ class Tile:
     def get_optimal_check_qubit_coord(
         tile_grid_size: Tuple[int, int],
         data_qubit_coords: List[GridCoordType],
-        blocked_check_qubit_coord: Optional[GridCoordType] = None,
-    ) -> GridCoordType:
+        blocked_check_qubit_coords: Optional[list[GridCoordType]] = None,
+        enforce_max_nearest_neighbors: bool = False,
+        distance_metric: Literal["euclidean", "manhattan", "random"] = "euclidean",
+        tie_breaker: Literal["euclidean", "manhattan", "random"] = "random",
+    ) -> tuple[GridCoordType, list[GridCoordType], dict]:
         """
         Return the coordinate within the tile grid where a check qubit should be placed
         to minimize the distance to all data qubits. The distance is calculated using the specified distance metric.
 
         Only coordinates with even (i + j) are considered valid.
+        If there is a blocked check qubit coord, that entire sublattice (faces or vertices) is blocked.
+        Coordinates where both numbers are odd lie on faces, coordinates where both numbers are even lie on vertices.
+        It suffices to check either the x or y dimension.
         """
 
         coord_evaluation_dict = {}
         max_num_neighbors = -1
-        lowest_total_distance = float("inf")
+        blocked_check_qubit_coords = blocked_check_qubit_coords or []
+
+        # faces have odd sublattice parity, vertices have even sublattice parity
+        blocked_sublattice_parity = (
+            None if len(blocked_check_qubit_coords) == 0 else (blocked_check_qubit_coords[0][0] % 2)
+        )
 
         # get coordinates with most neighboring data qubits in its support
         for i in range(tile_grid_size[0]):
@@ -248,8 +279,8 @@ class Tile:
                 if (i + j) % 2 == 1:
                     continue
 
-                if blocked_check_qubit_coord is not None and (i, j) == blocked_check_qubit_coord:
-                    # skip the blocked check qubit coordinate
+                # skip the blocked the unblocked sublattice
+                if i % 2 == blocked_sublattice_parity:
                     continue
 
                 # count the number of data qubits in the support of the check qubit
@@ -258,21 +289,66 @@ class Tile:
                 max_num_neighbors = max(max_num_neighbors, num_neighbors)
 
                 # calculate euclidean distance to all data qubits
-                total_distance = sum(
+                total_euclidean_distance = sum(
                     ((x - i) ** 2 + (y - j) ** 2) ** 0.5 for x, y in data_qubit_coords
                 )
 
-                coord_evaluation_dict[(i, j)] = (num_neighbors, total_distance)
+                # calculate manhattan distance to all data qubits
+                total_manhattan_distance = sum(
+                    abs(x - i) + abs(y - j) for x, y in data_qubit_coords
+                )
 
-        # go through the elements in the dictionary with the max number of neighbors
-        # pick the one with the lowest total distance
-        best_coord = None
-        for coord, (num_neighbors, total_distance) in coord_evaluation_dict.items():
-            if num_neighbors == max_num_neighbors:
-                if best_coord is None or total_distance < coord_evaluation_dict[best_coord][1]:
-                    best_coord = coord
+                coord_evaluation_dict[(i, j)] = (
+                    num_neighbors,
+                    total_euclidean_distance,
+                    total_manhattan_distance,
+                )
 
-        return cast(GridCoordType, best_coord)
+        rng = random.Random()
+
+        if distance_metric in ["euclidean", "manhattan"]:
+            assert (
+                tie_breaker != distance_metric
+            ), "Tie breaker must be different from distance metric"
+
+        # Build sortable records: (primary_metric_value, random_tiebreak, coord)
+        records: List[Tuple[float, float, GridCoordType]] = []
+        for coord, (num_neighbors, euclid, manh) in coord_evaluation_dict.items():
+            if distance_metric == "euclidean":
+                primary = float(euclid)
+            elif distance_metric == "manhattan":
+                primary = float(manh)
+            elif distance_metric == "random":
+                primary = rng.random()
+            else:
+                raise ValueError(f"Unsupported distance_metric: {distance_metric}")
+
+            # Tie-breaker: random secondary key (only supported option)
+            if tie_breaker == "euclidean":
+                secondary = float(euclid)
+            elif tie_breaker == "manhattan":
+                secondary = float(manh)
+            elif tie_breaker == "random":
+                secondary = rng.random()
+            else:
+                raise ValueError(f"Unsupported tie_breaker: {tie_breaker}")
+
+            records.append((primary, secondary, coord))
+
+        # Sort ascending by (metric, tie-break)
+        records.sort(key=lambda x: (x[0], x[1]))
+        sorted_coords = [rec[2] for rec in records]
+
+        # If enforcing, pick first with num_neighbors == max_nearest_neighbor
+        if enforce_max_nearest_neighbors:
+            for _, _, coord in records:
+                num_neighbors = coord_evaluation_dict[coord][0]
+                if num_neighbors == max_num_neighbors:
+                    return coord, sorted_coords, coord_evaluation_dict  # , sorted_coords
+
+        # No enforcement: just return the best overall
+        best = sorted_coords[0]
+        return best, sorted_coords, coord_evaluation_dict
 
     @property
     def absolute_data_qubit_coords(self) -> List[GridCoordType]:
@@ -396,6 +472,8 @@ class Tile:
                 # canvas[2 * y - 1][4 * x] = 'X'
                 canvas[2 * y + 1][4 * x] = basis
 
+        canvas[0][0] = "."  # Origin marker
+
         # add check qubit
         if check_qubit_coord is not None:
             x = check_qubit_coord[0]
@@ -409,8 +487,6 @@ class Tile:
                 f"Check qubit coordinate {check_qubit_coord} must have even sum of coordinates."
             )
             canvas[y][2 * x] = "c"  # Mark check qubit with 'c''
-
-        canvas[0][0] = "."  # Origin marker
 
         for row in canvas[::-1]:
             print("".join(row))
@@ -504,6 +580,10 @@ class TileMatrix:
         Parameter dictionaries used to instantiate X/Z tiles.
     matrix_size : tuple[int, int]
         Number of tiles in X and Y directions.
+    x_check_qubit_coord : tuple[int, int] | None
+        Relative coordinate of the x check qubit; computed if not provided.
+    z_check_qubit_coord : tuple[int, int] | None
+        Relative coordinate of the z check qubit; computed if not provided.
     matrix_bounding_box : tuple[int, int]
         Effective bounding box of the matrix in tile units.
     matrix_grid_size : tuple[int, int]
@@ -516,6 +596,14 @@ class TileMatrix:
         Mapping from matrix coordinates to tiles present there.
     deleted_data_qubit_coords : list[tuple[int, int]]
         Coordinates of pruned data qubits.
+    blocked_check_qubit_coords : list[tuple[int, int]]
+        List of blocked check qubit coordinates.
+    enforce_max_nearest_neighbors : bool
+        Whether to enforce a maximum number of nearest neighbors when choosing check qubit position.
+    distance_metric : Literal["euclidean", "manhattan", "random"] | None
+        The distance metric to use when choosing check qubit position.
+    tie_breaker : Literal["euclidean", "manhattan", "random"] | None
+        The tie breaker metric to use when choosing check qubit position.
     """
 
     def __init__(
@@ -524,6 +612,10 @@ class TileMatrix:
         matrix_size: Tuple[int, int],
         x_check_qubit_coord: Optional[GridCoordType] = None,
         z_check_qubit_coord: Optional[GridCoordType] = None,
+        blocked_check_qubit_coords: Optional[list[GridCoordType]] = None,
+        enforce_max_nearest_neighbors: bool = False,
+        distance_metric: Literal["euclidean", "manhattan", "random"] = "euclidean",
+        tie_breaker: Literal["euclidean", "manhattan", "random"] = "random",
     ):
 
         # assemble x tile params
@@ -533,10 +625,17 @@ class TileMatrix:
             2 * self.tile_bounding_box[0],
             2 * self.tile_bounding_box[1],
         )
+        blocked_check_qubit_coords = blocked_check_qubit_coords or []
         if x_check_qubit_coord is None:
-            x_check_qubit_coord = Tile.get_optimal_check_qubit_coord(
-                tile_grid_size=self.tile_grid_size,
-                data_qubit_coords=x_tile_params["data_qubit_coords"],
+            x_check_qubit_coord, self.sorted_check_qubit_coords, self.coord_eval_list = (
+                Tile.get_optimal_check_qubit_coord(
+                    tile_grid_size=self.tile_grid_size,
+                    data_qubit_coords=self.x_tile_params["data_qubit_coords"],
+                    blocked_check_qubit_coords=blocked_check_qubit_coords,
+                    enforce_max_nearest_neighbors=enforce_max_nearest_neighbors,
+                    distance_metric=distance_metric,
+                    tie_breaker=tie_breaker,
+                )
             )
         self.x_tile_params["check_qubit_coord"] = x_check_qubit_coord
 
@@ -556,14 +655,25 @@ class TileMatrix:
             "origin": (0, 0),
         }
         if z_check_qubit_coord is None:
-            z_check_qubit_coord = Tile.get_optimal_check_qubit_coord(
+            z_check_qubit_coord, _, _ = Tile.get_optimal_check_qubit_coord(
                 tile_grid_size=self.tile_grid_size,
                 data_qubit_coords=z_data_qubit_coords,
-                blocked_check_qubit_coord=x_check_qubit_coord,  # block the x check qubit coordinate
+                blocked_check_qubit_coords=[x_check_qubit_coord]
+                + blocked_check_qubit_coords,  # block the x check qubit coordinate
+                enforce_max_nearest_neighbors=enforce_max_nearest_neighbors,
+                distance_metric=distance_metric,
+                tie_breaker=tie_breaker,
             )
         assert (
             z_check_qubit_coord != x_check_qubit_coord
         ), f"Z check qubit coordinate {z_check_qubit_coord} must be different from X check qubit coordinate {x_check_qubit_coord}."
+        x_check_qubit_coord_sublattice_parity = x_check_qubit_coord[0] % 2
+        z_check_qubit_coord_sublattice_parity = z_check_qubit_coord[0] % 2
+        sublattices = ["vertices", "faces"]
+        assert z_check_qubit_coord_sublattice_parity != x_check_qubit_coord_sublattice_parity, (
+            f"Z check qubit coordinate {z_check_qubit_coord} must lie on a different sublattice than X check qubit coordinate {x_check_qubit_coord}.\n"
+            f"Both check qubits lie on {sublattices[x_check_qubit_coord_sublattice_parity]}. Coordinates where both numbers are odd lie on faces, coordinates where both numbers are even lie on vertices."
+        )
         self.z_tile_params["check_qubit_coord"] = z_check_qubit_coord
 
         self.matrix_size = matrix_size
@@ -1131,18 +1241,49 @@ class TileCode(TileMatrix):
         Code length, dimension and distance (estimated).
     pos_dict_bare, pos_dict_rich : dict
         Node position maps used for layout and tanner visualization.
+    x_tile_params, z_tile_params : dict
+        Parameter dictionaries used to instantiate X/Z tiles.
+    matrix_size : tuple[int, int]
+        Number of tiles in X and Y directions.
+    x_check_qubit_coord : tuple[int, int] | None
+        Relative coordinate of the x check qubit; computed if not provided.
+    z_check_qubit_coord : tuple[int, int] | None
+        Relative coordinate of the z check qubit; computed if not provided.
+    blocked_check_qubit_coords : list[tuple[int, int]]
+        List of blocked check qubit coordinates.
+    enforce_max_nearest_neighbors : bool
+        Whether to enforce a maximum number of nearest neighbors when choosing check qubit position.
+    distance_metric : Literal["euclidean", "manhattan", "random"] | None
+        The distance metric to use when choosing check qubit position.
+    tie_breaker : Literal["euclidean", "manhattan", "random"] | None
+        The tie breaker metric to use when choosing check qubit position.
     """
 
     def __init__(
         self,
         x_tile_params: TileParamsType,
         matrix_size: Tuple[int, int],
+        *,
         x_check_qubit_coord: Optional[GridCoordType] = None,
         z_check_qubit_coord: Optional[GridCoordType] = None,
+        blocked_check_qubit_coords: Optional[list[GridCoordType]] = None,
+        enforce_max_nearest_neighbors: bool = False,
+        distance_metric: Literal["euclidean", "manhattan", "random"] = "euclidean",
+        tie_breaker: Literal["euclidean", "manhattan", "random"] = "random",
         top_bot_basis: BasisType = "X",
         timeout: float = 1.0,
     ) -> None:
-        super().__init__(x_tile_params, matrix_size, x_check_qubit_coord, z_check_qubit_coord)
+        blocked_check_qubit_coords = blocked_check_qubit_coords or []
+        super().__init__(
+            x_tile_params,
+            matrix_size,
+            x_check_qubit_coord,
+            z_check_qubit_coord,
+            blocked_check_qubit_coords=blocked_check_qubit_coords,
+            enforce_max_nearest_neighbors=enforce_max_nearest_neighbors,
+            distance_metric=distance_metric,
+            tie_breaker=tie_breaker,
+        )
 
         self.add_boundary_tiles(top_bot_basis=top_bot_basis)
         self.prune_data_qubits()
@@ -1164,7 +1305,10 @@ class TileCode(TileMatrix):
         self.d = self.css_code.estimate_min_distance(timeout_seconds=timeout)
 
         self.pos_dict_bare = self.get_position_dict()
-        self.pos_dict_rich = {node: self.pos_dict_bare[(node.index, node.is_data)] for node in self.tanner_graph.nodes}  # type: ignore
+        self.pos_dict_rich = {
+            node: self.pos_dict_bare[(node.index, node.is_data)]  # type: ignore
+            for node in self.tanner_graph.nodes
+        }
 
     @classmethod
     def init_from_generalized_toric(
